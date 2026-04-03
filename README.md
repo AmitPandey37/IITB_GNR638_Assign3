@@ -35,9 +35,6 @@ This repository contains both:
 - `images/`
   Figures from the original repository README.
 
-- `PPT/`, `InfolabUserGuide.pdf`
-  Supporting course/server material used while running experiments.
-
 ## Paper Summary
 
 The paper studies composed image retrieval. The query is not just text and not just an image. Instead, it is:
@@ -85,16 +82,10 @@ CSSDataset/
     └── css_test_000000.png
 ```
 
-## Important Note About Dataset and Checkpoints
+CSS3D dataset link from the original TIRG repository:
 
-The full CSS3D dataset is about `1.7G`, and the saved training checkpoints are each around `120M+`.
-
-Because of that:
-- the dataset should **not** be committed to a normal GitHub repository,
-- the large checkpoints under `runs/` and `scratch_tirg/outputs/` should also **not** be committed,
-- this repository stores the code, report, and compact metric summaries instead.
-
-Use the dataset download link from the original repository README or place the dataset manually on your machine.
+- Original repository: `https://github.com/google/tirg`
+- CSS3D download link used in that repository: `https://drive.google.com/file/d/1wPqMw-HKmXUG2qTgYBiTNUnjz83hA2tY/view?usp=sharing`
 
 ## Environment Setup
 
