@@ -58,6 +58,54 @@ This report compares two implementations only:
 
 Both implementations were trained on the same CSS3D dataset and evaluated on the same CSS3D test split.
 
+\section{Architecture Comparison}
+At a high level, the two implementations are architecturally aligned. Both use the same main model family:
+\begin{itemize}[leftmargin=*]
+  \item a ResNet-18 image encoder,
+  \item an LSTM text encoder,
+  \item the TIRG gated-residual composition mechanism,
+  \item and a retrieval objective based on embedding similarity.
+\end{itemize}
+
+So the scratch implementation is not a different model in the conceptual sense. The main differences are in implementation details and training pipeline details rather than in the headline architecture.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{2.6cm}p{4.1cm}p{4.1cm}p{3.1cm}}
+\toprule
+Component & Official GitHub Implementation & Scratch Implementation & Practical Effect \\
+\midrule
+Image encoder & ResNet-18 CNN with ImageNet initialization and learned projection to the retrieval embedding space & ResNet-18 CNN with the same overall role and the same embedding target dimensionality & High-level image backbone is matched \\
+Text encoder & Vocabulary + tokenization + LSTM + dropout/linear output head & Independently written tokenizer, vocabulary, LSTM, and output head with the same overall purpose & Same model family, but small sequence-processing details differ \\
+Fusion module & TIRG gated branch plus residual branch & Same TIRG-style gated branch plus residual branch implemented independently & Core composition idea is preserved \\
+Normalization & Learned normalization layer applied before the retrieval loss & Same normalization idea was added to the scratch training path after debugging & Important for embedding geometry and ranking stability \\
+Loss & Soft-triplet retrieval loss used in the released code & Same soft-triplet objective implemented independently & Same high-level optimization target \\
+CSS3D sampling & Official CSS3D query-target pairing logic & Scratch loader was updated to mimic the same source-image pairing behavior & Strong effect on training dynamics \\
+Evaluation target matching & Uses CSS labels/captions for retrieval correctness & Scratch evaluator was corrected to use the same caption-based target identity & Critical for valid retrieval measurement \\
+\bottomrule
+\end{tabular}
+\caption{Architecture and pipeline comparison between the official GitHub implementation and the scratch implementation.}
+\label{tab:archcompare}
+\end{table}
+
+\subsection{What Is Actually the Same}
+The most important point is that the scratch implementation preserves the structural ideas of the paper. It is still a CNN/RNN model with the same retrieval formulation. The image branch, text branch, and TIRG composition mechanism are not replaced by a different architecture. This matters for the assignment because it means the scratch implementation is still a genuine reimplementation of the selected paper, not a different model presented under the same name.
+
+\subsection{What Is Different}
+The remaining differences are mostly at the implementation-detail level:
+\begin{itemize}[leftmargin=*]
+  \item tokenization and vocabulary construction,
+  \item the exact form of the LSTM output head,
+  \item the way normalization is applied before the loss,
+  \item the CSS3D training sampler,
+  \item and the evaluation identity used for target matching.
+\end{itemize}
+
+These are not cosmetic differences. Retrieval models are sensitive to embedding geometry, and embedding geometry is strongly affected by normalization, text encoding details, and batch construction.
+
+\subsection{Why This Still Counts as the Same Architecture}
+It is useful to separate \textit{architecture} from \textit{training pipeline}. If the image encoder had been replaced with a Vision Transformer, or the text encoder with a transformer decoder, then the scratch model would no longer be a faithful reimplementation. That is not the case here. The scratch model keeps the CNN/LSTM/TIRG design intact. The gap instead comes from how that design is instantiated and optimized.
+
 \section{Experimental Setup}
 I compare the two implementations up to epoch 105. This comparison is still fair even though the batch sizes used by the two runs were different, because the number of examples processed per epoch was the same:
 \begin{itemize}[leftmargin=*]
@@ -159,6 +207,23 @@ The scratch model matches the high-level TIRG design, but several details had to
 \end{itemize}
 
 Each of these decisions changes the geometry of the learned embedding space. In a retrieval problem, that matters directly, because ranking quality depends on relatively small differences in similarity scores.
+
+\subsection{Architecture-Level Similarity, Implementation-Level Gap}
+The architecture comparison in Table~\ref{tab:archcompare} helps explain an important point: the scratch model is not underperforming because it uses a different family of model. The broad architecture is already the same. The remaining gap comes from the fact that retrieval performance depends on a chain of small decisions that interact with one another:
+\begin{itemize}[leftmargin=*]
+  \item the text encoder affects the quality of the modification embedding,
+  \item the normalization layer affects the scale and direction of features,
+  \item the batch sampler affects which positive and negative relations are seen during training,
+  \item and the evaluator determines whether retrieval correctness is measured against the right semantic identity.
+\end{itemize}
+
+So the observed performance gap should be interpreted as a fidelity gap, not as evidence that the scratch model used the wrong kind of architecture.
+
+\subsection{Why the Text Side Matters So Much}
+On CSS3D, the modification string is short, but it still carries the exact operation the model must apply to the reference image. Small differences in tokenization, punctuation handling, vocabulary construction, or the LSTM output head can shift the text embedding enough to affect composition quality. Since TIRG combines image and text in the embedding space, a small text-side mismatch can propagate into the final retrieval ranking.
+
+\subsection{Why the Sampler Matters}
+The official CSS3D loader does not sample arbitrary source-target pairs uniformly. It uses a specific pattern that exposes multiple modifications from the same source image. When the scratch loader was initially simpler, it changed the training distribution seen by the model. That does not alter the architecture itself, but it alters what the architecture learns. For a retrieval model, this is often enough to create a measurable difference in top-1 performance.
 
 \subsection{Top-1 Is More Sensitive Than Top-10}
 The metric pattern gives a useful diagnostic signal. At epoch 105 the scratch gap is:
