@@ -1,0 +1,8 @@
+__pycache__/
+outputs/
+report/*.aux
+report/*.log
+report/*.out
+report/*.pdf
+report/*.json
+

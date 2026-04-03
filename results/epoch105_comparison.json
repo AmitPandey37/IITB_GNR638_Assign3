@@ -1,0 +1,43 @@
+{
+  "comparison_budget": {
+    "type": "epoch",
+    "value": 105
+  },
+  "dataset": {
+    "name": "CSS3D",
+    "test_images": 19057,
+    "test_queries": 18057,
+    "train_images": 19012,
+    "train_queries": 18012
+  },
+  "official": {
+    "best_within_budget": {
+      "epoch": 96,
+      "top1": 0.7099739909172058,
+      "top10": 0.9564157724380493,
+      "top5": 0.9244614243507385
+    },
+    "epoch_105": {
+      "epoch": 105,
+      "top1": 0.6976242065429688,
+      "top10": 0.9481087923049927,
+      "top5": 0.9133300185203552
+    },
+    "run_dir": "runs/Apr02_18-06-06_catcss3d_tirg_cat_gpu2"
+  },
+  "scratch": {
+    "best_within_budget": {
+      "epoch": 105,
+      "top1": 0.5677022761256023,
+      "top10": 0.9037492385224567,
+      "top5": 0.8491997563271861
+    },
+    "epoch_105": {
+      "epoch": 105,
+      "top1": 0.5677022761256023,
+      "top10": 0.9037492385224567,
+      "top5": 0.8491997563271861
+    },
+    "run_dir": "scratch_tirg/outputs/20260403_231720_css3d_tirg_scratch_v2_gpu0_fast"
+  }
+}

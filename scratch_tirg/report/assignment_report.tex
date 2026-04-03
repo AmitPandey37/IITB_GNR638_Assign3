@@ -1,0 +1,199 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{amsmath}
+
+\title{Assignment 3 Report:\\Reimplementation of TIRG for Composed Image Retrieval}
+\author{Amit Pandey}
+\date{April 4, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Paper Overview}
+The paper studied in this assignment is \textit{Composing Text and Image for Image Retrieval -- An Empirical Odyssey} by Nam Vo, Lu Jiang, Chen Sun, Kevin Murphy, Li-Jia Li, Li Fei-Fei, and James Hays, published in CVPR 2019.
+
+The task in the paper is composed image retrieval. Instead of retrieving images from text alone or from an image alone, the query is made of two parts:
+\begin{itemize}[leftmargin=*]
+  \item a reference image, and
+  \item a short text instruction describing how that image should be modified.
+\end{itemize}
+
+The model must combine both inputs into a single embedding and retrieve the image that best matches the requested transformation. The central idea of the paper is the TIRG composition function, which combines image and text features using a gated branch and a residual branch.
+
+Architecturally, the method remains within the CNN/RNN setting used in class:
+\begin{itemize}[leftmargin=*]
+  \item a CNN image encoder,
+  \item an LSTM-based text encoder,
+  \item and a learned fusion module for retrieval.
+\end{itemize}
+
+\section{Dataset Used}
+I used the CSS3D dataset, which is the toy dataset released with the public TIRG code. CSS3D is synthetic: each image is a scene made of simple colored geometric objects. The text modifications describe changes such as adding an object, removing an object, changing color, changing size, or changing shape.
+
+Examples of modification strings include:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{add brown object}
+  \item \texttt{make blue object small}
+  \item \texttt{add large object to top-left}
+  \item \texttt{make circle brown}
+\end{itemize}
+
+The reason for using CSS3D in this assignment is practical. It is small enough to train and debug on a shared server while still preserving the same composed retrieval objective as the full problem.
+
+The dataset statistics used in my runs are:
+\begin{itemize}[leftmargin=*]
+  \item training split: 19,012 images, 6,004 modification templates, 18,012 composed queries,
+  \item test split: 19,057 images, 6,019 modification templates, 18,057 composed queries.
+\end{itemize}
+
+\section{Implementations Compared}
+This report compares two implementations only:
+\begin{enumerate}[leftmargin=*]
+  \item the released GitHub implementation of TIRG used as the official baseline,
+  \item my independent PyTorch reimplementation of the same method.
+\end{enumerate}
+
+Both implementations were trained on the same CSS3D dataset and evaluated on the same CSS3D test split.
+
+\section{Experimental Setup}
+I compare the two implementations up to epoch 105. This comparison is still fair even though the batch sizes used by the two runs were different, because the number of examples processed per epoch was the same:
+\begin{itemize}[leftmargin=*]
+  \item official run: $594 \times 32 = 19{,}008$ examples per epoch,
+  \item scratch run: $297 \times 64 = 19{,}008$ examples per epoch.
+\end{itemize}
+
+So the epoch budget is also a matched data budget.
+
+The two runs are:
+\begin{itemize}[leftmargin=*]
+  \item official GitHub run: completed reference run trained on CSS3D,
+  \item scratch run: independent reimplementation trained on CSS3D.
+\end{itemize}
+
+The scratch run was evaluated at epochs
+\[
+0,\ 15,\ 30,\ 45,\ 60,\ 75,\ 90,\ 105.
+\]
+
+\section{Results at Epoch 105}
+Table~\ref{tab:epoch105} shows the exact metrics available at epoch 105 for the two implementations.
+
+\begin{table}[h]
+\centering
+\input{comparison_table.tex}
+\caption{Official GitHub implementation versus scratch implementation at epoch 105 on CSS3D test retrieval. Gap is Scratch minus Official.}
+\label{tab:epoch105}
+\end{table}
+
+At epoch 105, the official implementation remains stronger on all three reported metrics:
+\begin{itemize}[leftmargin=*]
+  \item top-1 recall: official 0.6976, scratch 0.5677,
+  \item top-5 recall: official 0.9133, scratch 0.8492,
+  \item top-10 recall: official 0.9481, scratch 0.9037.
+\end{itemize}
+
+The gap is largest on top-1 and smaller on top-10. This pattern is important. It suggests that the scratch model is learning useful compositional structure, but it is less precise in ranking the exact correct target at the very top of the retrieval list.
+
+\section{Best Results Within the Same Epoch Budget}
+For completeness, I also checked the best result achieved by each implementation within the first 105 epochs.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Metric & Official Best $\leq 105$ & Official Epoch & Scratch Best $\leq 105$ & Scratch Epoch \\
+\midrule
+Top-1 recall & 0.7100 & 96 & 0.5677 & 105 \\
+Top-5 recall & 0.9245 & 96 & 0.8492 & 105 \\
+Top-10 recall & 0.9564 & 96 & 0.9037 & 105 \\
+\bottomrule
+\end{tabular}
+\caption{Best retrieval metrics reached by each implementation within the first 105 epochs.}
+\label{tab:best105}
+\end{table}
+
+The official model peaks earlier, at epoch 96 for all three reported metrics. The scratch implementation is still improving up to epoch 105, which is the strongest checkpoint observed so far within this comparison window.
+
+\section{Scratch Learning Trend}
+The scratch implementation improves steadily across its evaluation points:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{cccc}
+\toprule
+Epoch & Top-1 Recall & Top-5 Recall & Top-10 Recall \\
+\midrule
+0 & 0.2274 & 0.5402 & 0.6870 \\
+15 & 0.3857 & 0.7261 & 0.8225 \\
+30 & 0.4504 & 0.7807 & 0.8593 \\
+45 & 0.4832 & 0.8024 & 0.8748 \\
+60 & 0.5117 & 0.8206 & 0.8856 \\
+75 & 0.5357 & 0.8342 & 0.8950 \\
+90 & 0.5544 & 0.8402 & 0.9000 \\
+105 & 0.5677 & 0.8492 & 0.9037 \\
+\bottomrule
+\end{tabular}
+\caption{Scratch implementation performance at each evaluation point up to epoch 105.}
+\label{tab:scratchtrend}
+\end{table}
+
+This trend matters for interpretation. The scratch model is not diverging and it is not collapsing. It is learning consistently, but it is learning more slowly and does not yet match the official implementation by epoch 105.
+
+\section{Why the Results Are Different}
+The difference between the two runs is not explained by the dataset, because both runs use the same CSS3D train and test splits. The difference comes from implementation fidelity and training behavior.
+
+\subsection{The Official Code Is a Mature Reference Implementation}
+The released GitHub implementation already contains the exact engineering decisions that make the method work reliably on CSS3D. Even when the high-level architecture is reproduced correctly, small low-level choices still matter in retrieval models. The official code is therefore a strong baseline not only because of the architecture, but because its training pipeline has already been validated.
+
+\subsection{A Scratch Reimplementation Has to Recover Many Small Details}
+The scratch model matches the high-level TIRG design, but several details had to be recovered during implementation:
+\begin{itemize}[leftmargin=*]
+  \item the CSS3D training sampler,
+  \item tokenization and vocabulary behavior for text,
+  \item the LSTM output head,
+  \item the normalization used before the soft-triplet loss,
+  \item and the way target captions are interpreted during evaluation.
+\end{itemize}
+
+Each of these decisions changes the geometry of the learned embedding space. In a retrieval problem, that matters directly, because ranking quality depends on relatively small differences in similarity scores.
+
+\subsection{Top-1 Is More Sensitive Than Top-10}
+The metric pattern gives a useful diagnostic signal. At epoch 105 the scratch gap is:
+\begin{itemize}[leftmargin=*]
+  \item about 0.130 on top-1,
+  \item about 0.064 on top-5,
+  \item about 0.044 on top-10.
+\end{itemize}
+
+If the scratch implementation were completely wrong, the gap would remain large across all cutoffs. Instead, the gap shrinks as $k$ increases. That means the scratch embeddings usually place the correct target in the neighborhood of the right answer, but the ordering near the very top is still weaker than the official implementation.
+
+\subsection{The Scratch Run Is Still Improving at Epoch 105}
+Another useful difference is where the two runs peak within the same budget. The official implementation reaches its best metrics by epoch 96. The scratch implementation reaches its current best metrics at epoch 105, the last point observed in this report.
+
+This suggests that the scratch model has not saturated yet. Therefore, part of the gap is due to slower optimization and not only due to architectural mismatch.
+
+\subsection{Runtime-Oriented Choices Also Affect Optimization}
+The scratch run used throughput-oriented choices such as a larger batch size and mixed precision on GPU so that training could be completed on the available server budget. Those choices improve runtime, but they also slightly change the optimization dynamics. Even with the same number of examples per epoch, the gradient noise and update behavior are not identical to the official run. That is another plausible reason for the remaining gap.
+
+\section{Discussion}
+The main conclusion is that the independent implementation is working, but it is not yet as strong as the official GitHub baseline.
+
+I would summarize the comparison as follows:
+\begin{itemize}[leftmargin=*]
+  \item the scratch implementation successfully learns the composed retrieval task,
+  \item its retrieval quality improves steadily up to epoch 105,
+  \item but it remains consistently below the official implementation,
+  \item and the largest remaining weakness is in exact top-1 ranking.
+\end{itemize}
+
+This is still a meaningful outcome for the assignment. The objective was not just to run the official code, but to rebuild the method independently and compare the result against the released reference implementation. The scratch model does that, and the comparison makes clear where the reimplementation is already successful and where it still lags behind.
+
+\section{Conclusion}
+This assignment required an independent implementation of the paper and an experimental comparison against the official GitHub code. I completed both parts on the CSS3D toy dataset.
+
+Within the first 105 epochs, the official implementation remains stronger, but the scratch implementation reaches a top-1 recall of 0.5677 and shows a stable, monotonic improvement trend across its evaluation points. The comparison therefore demonstrates both the feasibility of the independent reimplementation and the performance gap that still remains relative to the released baseline.
+
+\end{document}
