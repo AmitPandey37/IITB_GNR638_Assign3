@@ -151,26 +151,6 @@ At epoch 105, the official implementation remains stronger on all three reported
 
 The gap is largest on top-1 and smaller on top-10. This pattern is important. It suggests that the scratch model is learning useful compositional structure, but it is less precise in ranking the exact correct target at the very top of the retrieval list.
 
-\section{Best Results Within the Same Epoch Budget}
-For completeness, I also checked the best result achieved by each implementation within the first 105 epochs.
-
-\begin{table}[h]
-\centering
-\begin{tabular}{lcccc}
-\toprule
-Metric & Official Best $\leq 105$ & Official Epoch & Scratch Best $\leq 105$ & Scratch Epoch \\
-\midrule
-Top-1 recall & 0.7100 & 96 & 0.5677 & 105 \\
-Top-5 recall & 0.9245 & 96 & 0.8492 & 105 \\
-Top-10 recall & 0.9564 & 96 & 0.9037 & 105 \\
-\bottomrule
-\end{tabular}
-\caption{Best retrieval metrics reached by each implementation within the first 105 epochs.}
-\label{tab:best105}
-\end{table}
-
-The official model peaks earlier, at epoch 96 for all three reported metrics. The scratch implementation is still improving up to epoch 105, which is the strongest checkpoint observed so far within this comparison window.
-
 \section{Scratch Learning Trend}
 The scratch implementation improves steadily across its evaluation points:
 
